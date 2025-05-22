@@ -4,7 +4,6 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
 // Product type definition
 export type Product = {
   id: number;
@@ -464,5 +463,121 @@ export const mockCustomers: Customer[] = [
       { date: "Apr 2, 2024", product: "Hair Scissors", price: 34.95 },
       { date: "Feb 28, 2024", product: "Styling Gel", price: 16.95 },
     ],
+  },
+];
+
+// Order type definitions
+export type OrderStatus = "pending" | "processing" | "completed" | "cancelled";
+
+export interface OrderItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Order {
+  id: number;
+  customerId: number;
+  customerName: string;
+  email: string;
+  date: string;
+  items: OrderItem[];
+  totalAmount: number;
+  status: OrderStatus;
+}
+
+// Mock orders data
+export const mockOrders: Order[] = [
+  {
+    id: 1,
+    customerId: 101,
+    customerName: "Alex Johnson",
+    email: "alex@example.com",
+    date: "2023-04-15T10:30:00",
+    items: [
+      {
+        productId: 1,
+        productName: "Premium Pomade",
+        quantity: 2,
+        price: 24.99,
+      },
+      { productId: 3, productName: "Beard Oil", quantity: 1, price: 19.99 },
+    ],
+    totalAmount: 69.97,
+    status: "completed",
+  },
+  {
+    id: 2,
+    customerId: 102,
+    customerName: "Sarah Wilson",
+    email: "sarah@example.com",
+    date: "2023-04-16T14:45:00",
+    items: [
+      { productId: 2, productName: "Hair Wax", quantity: 1, price: 18.99 },
+      { productId: 4, productName: "Shaving Cream", quantity: 1, price: 12.99 },
+    ],
+    totalAmount: 31.98,
+    status: "processing",
+  },
+  {
+    id: 3,
+    customerId: 103,
+    customerName: "Michael Brown",
+    email: "michael@example.com",
+    date: "2023-04-17T09:15:00",
+    items: [
+      {
+        productId: 5,
+        productName: "Aftershave Balm",
+        quantity: 1,
+        price: 22.99,
+      },
+    ],
+    totalAmount: 22.99,
+    status: "pending",
+  },
+  {
+    id: 4,
+    customerId: 104,
+    customerName: "Emily Davis",
+    email: "emily@example.com",
+    date: "2023-04-18T16:20:00",
+    items: [
+      {
+        productId: 1,
+        productName: "Premium Pomade",
+        quantity: 3,
+        price: 24.99,
+      },
+      { productId: 6, productName: "Hair Tonic", quantity: 2, price: 17.99 },
+    ],
+    totalAmount: 110.95,
+    status: "completed",
+  },
+  {
+    id: 5,
+    customerId: 105,
+    customerName: "David Miller",
+    email: "david@example.com",
+    date: "2023-04-19T11:10:00",
+    items: [
+      { productId: 7, productName: "Beard Brush", quantity: 1, price: 15.99 },
+    ],
+    totalAmount: 15.99,
+    status: "cancelled",
+  },
+  {
+    id: 6,
+    customerId: 106,
+    customerName: "Jessica Taylor",
+    email: "jessica@example.com",
+    date: "2023-04-20T13:25:00",
+    items: [
+      { productId: 2, productName: "Hair Wax", quantity: 2, price: 18.99 },
+      { productId: 8, productName: "Styling Gel", quantity: 1, price: 14.99 },
+    ],
+    totalAmount: 52.97,
+    status: "processing",
   },
 ];

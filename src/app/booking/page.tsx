@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getAllBarbers, getAvailableBarbers, BarberData } from "@/api/services/barberService";
+import { useBooking } from "@/hooks/useBooking";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, FormProvider } from "react-hook-form";
@@ -13,6 +15,7 @@ import {
   faCalendarAlt,
   faUserAlt,
   faInfoCircle,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { DayPicker } from "react-day-picker";
+import { format } from "date-fns";
+import "react-day-picker/dist/style.css";
 
 // Define types
 interface Service {
@@ -31,15 +37,7 @@ interface Service {
   name: string;
 }
 
-interface Barber {
-  id: string;
-  name: string;
-}
-
-interface DateTime {
-  id: string;
-  time: string;
-}
+// Using BarberData interface from barberService.ts
 
 interface BookingFormData {
   name: string;
@@ -55,25 +53,105 @@ interface BookingFormData {
 
 // Mock data
 const SERVICES: Service[] = [
-  { id: "haircut", name: "Haircut" },
-  { id: "beard", name: "Beard Trim" },
-  { id: "styling", name: "Styling" },
+  { id: "440130fb-bcb0-4481-8534-c433dcc0dca4", name: "Shave" },
+  { id: "67e14468-2554-40e1-8a4b-398687e421f9", name: "Beard Trim" },
+  { id: "b47fbfde-265f-4e34-bf68-cba201612762", name: "Haircut" },
   { id: "facecare", name: "Face Care" },
 ];
 
-const BARBERS: Barber[] = [
-  { id: "james", name: "James" },
-  { id: "bradley", name: "Bradley" },
-  { id: "megan", name: "Megan" },
-  { id: "matthew", name: "Matthew" },
+// Barbers will be fetched from the API
+
+// Default time slots for barbers (used when no specific schedule is defined)
+const DEFAULT_TIME_SLOTS = [
+  "09:00 AM",
+  "10:00 AM",
+  "11:00 AM",
+  "12:00 PM",
+  "01:00 PM",
+  "02:00 PM",
+  "03:00 PM",
+  "04:00 PM",
+  "05:00 PM",
 ];
 
-const DATETIMES: DateTime[] = [
-  { id: "1", time: "April 15, 2025 - 10:00 AM" },
-  { id: "2", time: "April 15, 2025 - 11:00 AM" },
-  { id: "3", time: "April 15, 2025 - 2:00 PM" },
-  { id: "4", time: "April 15, 2025 - 3:00 PM" },
-];
+// Barber schedules will be fetched from the API
+// This is a fallback for testing
+const BARBER_SCHEDULE: Record<string, Record<string, string[]>> = {
+  // Example fallback schedule for specific barbers
+  "143a0b5d-7fbb-4036-9f10-7fe420e2dd46": {
+    "2025-05-15": [
+      "09:00 AM",
+      "10:00 AM",
+      "11:00 AM",
+      "01:00 PM",
+      "02:00 PM",
+      "03:00 PM",
+      "04:00 PM"
+    ]
+  },
+  "d7456438-fa8a-4526-b3cc-b58819169cb9": {
+    "2025-05-16": [
+      "09:00 AM",
+      "10:00 AM",
+      "11:00 AM",
+      "01:00 PM",
+      "02:00 PM",
+      "03:00 PM",
+      "04:00 PM",
+      "05:00 PM"
+    ],
+  },
+  "bradley": {
+    "2025-05-15": [
+      "09:30 AM",
+      "10:30 AM",
+      "11:30 AM",
+      "01:30 PM",
+      "02:30 PM",
+      "03:30 PM",
+      "04:30 PM",
+    ],
+  },
+  "megan": {
+    "2025-05-15": [
+      "09:30 AM",
+      "10:30 AM",
+      "11:30 AM",
+      "01:00 PM",
+      "02:00 PM",
+      "03:30 PM",
+      "04:30 PM",
+    ],
+  },
+  "matthew": {
+    "2025-05-15": [
+      "09:30 AM",
+      "10:30 AM",
+      "11:30 AM",
+      "12:30 PM",
+      "01:30 PM",
+      "02:30 PM",
+      "03:30 PM",
+      "04:00 PM",
+    ],
+  },
+};
+
+// Function to get working hours for a barber on a specific date
+function getWorkingHours(barber: string, date: Date): string {
+  const formattedDate = format(date, "yyyy-MM-dd");
+  const schedule =
+    BARBER_SCHEDULE[barber]?.[formattedDate] ?? DEFAULT_TIME_SLOTS;
+
+  if (!schedule || schedule.length === 0) {
+    return "Not available on this day";
+  }
+
+  const firstSlot = schedule[0];
+  const lastSlot = schedule[schedule.length - 1];
+
+  return `${firstSlot} - ${lastSlot}`;
+}
 
 export default function BookingPage() {
   const { toast } = useToast();
@@ -100,65 +178,234 @@ export default function BookingPage() {
     watch,
   } = methods;
 
+  const { submitBooking } = useBooking();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const selectedService = watch("service");
+  
+  // State for barbers from API
+  const [barbers, setBarbers] = useState<BarberData[]>([]);
+  const [loadingBarbers, setLoadingBarbers] = useState(false);
+  const [availableBarbers, setAvailableBarbers] = useState<BarberData[]>([]);
+
   const selectedBarber = watch("barber");
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploading(true);
+  // Fetch all barbers when component mounts
+  useEffect(() => {
+    const fetchBarbers = async () => {
       try {
-        // Convert file to data URL
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64data = reader.result as string;
-
-          // Store in localStorage
-          const bookingImages = JSON.parse(
-            localStorage.getItem("booking-images") || "[]"
-          );
-          const imagePath = `uploads/${Date.now()}-${file.name}`;
-          bookingImages.push({ path: imagePath, data: base64data });
-          localStorage.setItem("booking-images", JSON.stringify(bookingImages));
-
-          // Set the image URL in the form
-          setValue("imageUrl", base64data);
-          toast({ description: "Image uploaded successfully!" });
-          setUploading(false);
-        };
-        reader.readAsDataURL(file);
+        setLoadingBarbers(true);
+        const barbersData = await getAllBarbers();
+        setBarbers(barbersData);
+        console.log('Fetched barbers:', barbersData);
       } catch (error) {
+        console.error('Error fetching barbers:', error);
         toast({
-          title: "Upload Error",
-          description:
-            error instanceof Error ? error.message : "Failed to upload image",
+          title: "Error",
+          description: "Could not load barbers. Please try again later.",
           variant: "destructive",
         });
+      } finally {
+        setLoadingBarbers(false);
+      }
+    };
+
+    fetchBarbers();
+  }, [toast]);
+
+  // Update available time slots when date or barber changes
+  useEffect(() => {
+    if (selectedBarber && selectedDate) {
+      setCheckingAvailability(true);
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+
+      // Get time slots for this barber on this date
+      // First check if the selected barber has working hours in their profile
+      const selectedBarberData = barbers.find(b => b.id === selectedBarber);
+      
+      // Get working hours for this barber (either from their profile or use default)
+      const allPossibleSlots = selectedBarberData?.workingHours
+        ?.find(wh => wh.day === format(selectedDate, 'EEEE').toLowerCase())?.hours.split(',')
+        ?? BARBER_SCHEDULE[selectedBarber]?.[formattedDate]
+        ?? DEFAULT_TIME_SLOTS;
+      
+      // Fetch available barbers for the selected date
+      const fetchAvailableBarbers = async () => {
+        try {
+          const formattedTime = selectedTime ?? '';
+          if (formattedDate && formattedTime) {
+            const availableBarbers = await getAvailableBarbers(formattedDate, formattedTime);
+            setAvailableBarbers(availableBarbers);
+            console.log('Available barbers for', formattedDate, formattedTime, ':', availableBarbers);
+          }
+        } catch (error) {
+          console.error('Error fetching available barbers:', error);
+        }
+      };
+
+      // Only fetch available barbers if we have both date and time
+      if (selectedTime) {
+        fetchAvailableBarbers();
+      }
+
+      // Get existing bookings from localStorage
+      const existingBookings = JSON.parse(
+        localStorage.getItem("bookings") ?? "[]"
+      );
+
+      // Find bookings for this barber on this date
+      const bookedSlots = existingBookings
+        .filter((booking: any) => {
+          return (
+            booking.barber === selectedBarber &&
+            booking.formattedDate === formattedDate
+          );
+        })
+        .map((booking: any) => booking.selectedTime);
+
+      // Filter out booked slots to get available slots
+      const availableSlots = allPossibleSlots.filter(
+        (slot: string) => !bookedSlots.includes(slot)
+      );
+
+      // Simulate a bit of delay to show loading state (remove in production)
+      setTimeout(() => {
+        setAvailableTimeSlots(availableSlots);
+        setSelectedTime(null); // Reset selected time when date or barber changes
+        setCheckingAvailability(false);
+      }, 500);
+    } else {
+      setAvailableTimeSlots([]);
+      setSelectedTime(null);
+      setCheckingAvailability(false);
+    }
+  }, [selectedDate, selectedBarber]);
+
+  // Set the dateTime value when both date and time are selected
+  useEffect(() => {
+    if (selectedDate && selectedTime) {
+      const formattedDate = format(selectedDate, "MMMM d, yyyy");
+      setValue("dateTime", `${formattedDate} - ${selectedTime}`);
+    } else {
+      setValue("dateTime", "");
+    }
+  }, [selectedDate, selectedTime, setValue]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) {
+      setPreviewUrl("");
+      setSelectedFile(null);
+      return;
+    }
+
+    const file = e.target.files[0];
+    console.log('File selected:', file.name, file.type, file.size);
+    setSelectedFile(file);
+
+    // Show preview
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      try {
+        if (typeof reader.result === "string") {
+          setPreviewUrl(reader.result);
+          // Display the preview somewhere in the UI
+          console.log('Preview URL generated, length:', reader.result.length);
+        }
+      } catch (err) {
+        console.error("Error processing image:", err);
+        toast({
+          title: "Error",
+          description: "Failed to process image",
+          variant: "destructive",
+        });
+      } finally {
         setUploading(false);
       }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Helper function to convert time from 12-hour to 24-hour format
+  const convertTo24HourFormat = (timeStr: string): string => {
+    if (!timeStr) return '';
+    
+    const [timePart, modifier] = timeStr.split(' ');
+    let [hours, minutes] = timePart.split(':');
+    let hoursNum = parseInt(hours, 10);
+    
+    // Convert to 24-hour format
+    if (modifier === 'PM' && hoursNum < 12) {
+      hoursNum += 12;
+    } else if (modifier === 'AM' && hoursNum === 12) {
+      hoursNum = 0;
     }
+    
+    // Ensure two digits
+    const formattedHours = hoursNum.toString().padStart(2, '0');
+    return `${formattedHours}:${minutes}`;
   };
 
   const onSubmit = async (data: BookingFormData) => {
     try {
-      // Store booking data in localStorage
-      const bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
-      const bookingId = Date.now().toString();
-      const newBooking = { id: bookingId, ...data };
-      bookings.push(newBooking);
-      localStorage.setItem("bookings", JSON.stringify(bookings));
+      if (!selectedDate || !selectedTime) {
+        toast({
+          title: "Error",
+          description: "Please select a date and time",
+          variant: "destructive",
+        });
+        return;
+      }
 
+      // Format date as YYYY-MM-DD
+      const formattedDate = format(selectedDate, "yyyy-MM-dd");
+      
+      // Convert time to 24-hour format (HH:MM)
+      const formattedTime = convertTo24HourFormat(selectedTime);
+      
+      console.log('Sending time format:', formattedTime); 
+
+      // Create final form data with explicit date and time fields
+      const bookingData = {
+        ...data,
+        // Override dateTime with properly formatted values
+        date: formattedDate,
+        time: formattedTime,
+      };
+      console.log('Booking data:', bookingData);
+
+      // Log file information before submission
+      if (selectedFile) {
+        console.log('Submitting file:', {
+          name: selectedFile.name,
+          type: selectedFile.type,
+          size: selectedFile.size,
+          lastModified: new Date(selectedFile.lastModified).toISOString()
+        });
+      } else {
+        console.log('No file selected for upload');
+      }
+      
+      // Submit to backend using our booking service
+      const response = await submitBooking(bookingData, selectedFile ?? undefined);
+
+      // Show success toast
       toast({
-        title: "Appointment Booked!",
-        description: "Your appointment has been scheduled.",
+        title: "Booking Confirmed",
+        description: "Your appointment has been scheduled successfully!",
       });
-      router.push(`/booking/confirmation/${bookingId}`);
-    } catch (error) {
+
+      // Redirect to confirmation page with the actual booking ID
+      router.push(`/booking/confirmation/${response.id}`);
+    } catch (error: any) {
+      console.error("Error submitting booking:", error);
       toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "An error occurred",
+        title: "Booking Failed",
+        description: error.message ?? "There was an error processing your booking. Please try again.",
         variant: "destructive",
       });
     }
@@ -197,13 +444,13 @@ export default function BookingPage() {
                   </div>
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm mb-2 text-zinc-300">
+                      <label htmlFor="service-select" className="block text-sm mb-2 text-zinc-300">
                         Service
                       </label>
                       <Select
                         onValueChange={value => setValue("service", value)}
                       >
-                        <SelectTrigger className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30">
+                        <SelectTrigger id="service-select" className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30">
                           <SelectValue placeholder="Select service" />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-800 border border-gold-400/20 text-white">
@@ -221,21 +468,28 @@ export default function BookingPage() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm mb-2 text-zinc-300">
+                      <label htmlFor="barber-select" className="block text-sm mb-2 text-zinc-300">
                         Barber
                       </label>
                       <Select
                         onValueChange={value => setValue("barber", value)}
+                        disabled={loadingBarbers}
                       >
-                        <SelectTrigger className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30">
-                          <SelectValue placeholder="Choose your barber" />
+                        <SelectTrigger id="barber-select" className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30">
+                          <SelectValue placeholder={loadingBarbers ? "Loading barbers..." : "Choose your barber"} />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-800 border border-gold-400/20 text-white">
-                          {BARBERS.map(barber => (
-                            <SelectItem key={barber.id} value={barber.id}>
-                              {barber.name}
+                          {barbers.length > 0 ? (
+                            barbers.map(barber => (
+                              <SelectItem key={barber.id} value={barber.id}>
+                                {barber.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-barbers" disabled>
+                              {loadingBarbers ? "Loading..." : "No barbers available"}
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       {errors.barber && (
@@ -245,29 +499,146 @@ export default function BookingPage() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm mb-2 text-zinc-300">
-                        Date & Time
+                      <label htmlFor="date-picker" className="block text-sm mb-2 text-zinc-300">
+                        Select Date
                       </label>
-                      <Select
-                        onValueChange={value => setValue("dateTime", value)}
-                      >
-                        <SelectTrigger className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30">
-                          <SelectValue placeholder="Select date and time" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-800 border border-gold-400/20 text-white">
-                          {DATETIMES.map(dt => (
-                            <SelectItem key={dt.id} value={dt.id}>
-                              {dt.time}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.dateTime && (
+                      <div className="bg-zinc-800/70 border border-zinc-700 rounded-lg p-4 focus-within:border-gold-400 focus-within:ring-1 focus-within:ring-gold-400 transition-colors hover:border-gold-400/30">
+                        <style>{`
+                          .rdp {
+                            --rdp-cell-size: 40px;
+                            --rdp-accent-color: #d4af37;
+                            --rdp-background-color: rgba(212, 175, 55, 0.2);
+                            --rdp-accent-color-dark: #d4af37;
+                            --rdp-background-color-dark: rgba(
+                              212,
+                              175,
+                              55,
+                              0.2
+                            );
+                            --rdp-outline: 2px solid var(--rdp-accent-color);
+                            --rdp-outline-selected: 2px solid
+                              var(--rdp-accent-color);
+                            margin: 0;
+                          }
+                          .rdp-months {
+                            justify-content: center;
+                          }
+                          .rdp-day_selected,
+                          .rdp-day_selected:focus-visible,
+                          .rdp-day_selected:hover {
+                            background-color: var(--rdp-accent-color);
+                            color: white;
+                          }
+                          .rdp-button:hover:not([disabled]):not(
+                              .rdp-day_selected
+                            ) {
+                            background-color: rgba(212, 175, 55, 0.1);
+                          }
+                          .rdp-day {
+                            color: #e4e4e7;
+                          }
+                          .rdp-head_cell {
+                            color: #a1a1aa;
+                            font-weight: 600;
+                          }
+                          .rdp-nav_button:hover {
+                            background-color: rgba(212, 175, 55, 0.1);
+                          }
+                        `}</style>
+                        <DayPicker
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          className="text-white"
+                          fromMonth={new Date()}
+                          disabled={{ before: new Date() }}
+                          id="date-picker"
+                        />
+                      </div>
+                      {!selectedDate && errors.dateTime && (
                         <span className="text-red-500 text-sm">
-                          Date and time are required
+                          Date is required
                         </span>
                       )}
                     </div>
+
+                    {selectedDate && selectedBarber && (
+                      <>
+                        <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 mb-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <FontAwesomeIcon
+                                icon={faCalendarAlt}
+                                className="text-gold-400 mr-2"
+                              />
+                              <span className="text-sm text-zinc-300">
+                                Barber's Schedule
+                              </span>
+                            </div>
+                            <span className="text-sm text-gold-400 font-medium">
+                              {getWorkingHours(selectedBarber, selectedDate)}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor="time-slots" className="block text-sm mb-2 text-zinc-300">
+                            <div className="flex items-center">
+                              <FontAwesomeIcon
+                                icon={faClock}
+                                className="text-gold-400 mr-2"
+                              />
+                              <span>Available Time Slots</span>
+                            </div>
+                          </label>
+
+                          {checkingAvailability ? (
+                            <div className="text-center py-8 px-3 bg-zinc-800/50 border border-zinc-700 rounded-lg">
+                              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-gold-400 border-r-transparent"></div>
+                              <p className="mt-2 text-sm text-zinc-400">
+                                Checking availability...
+                              </p>
+                            </div>
+                          ) : (
+                            <div id="time-slots" className="grid grid-cols-2 gap-2 mt-2">
+                              {availableTimeSlots.length > 0 ? (
+                                availableTimeSlots.map(time => (
+                                  <Button
+                                    key={time}
+                                    type="button"
+                                    variant="outline"
+                                    className={`border border-zinc-700 hover:border-gold-400/30 ${
+                                      selectedTime === time
+                                        ? "bg-gold-gradient from-gold-400 to-gold-500 text-white"
+                                        : "bg-zinc-800/70 text-white hover:bg-zinc-700/50"
+                                    }`}
+                                    onClick={() => setSelectedTime(time)}
+                                  >
+                                    {time}
+                                  </Button>
+                                ))
+                              ) : (
+                                <div className="col-span-2 text-center py-4 px-3 text-zinc-400 bg-zinc-800/50 border border-zinc-700 rounded-lg">
+                                  <p className="text-rose-400 mb-1">
+                                    All slots are booked for this date
+                                  </p>
+                                  <p className="text-sm">
+                                    Please select another date or barber
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {errors.dateTime &&
+                            !selectedTime &&
+                            !checkingAvailability && (
+                              <span className="text-red-500 text-sm block mt-2">
+                                Time slot is required
+                              </span>
+                            )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -435,7 +806,12 @@ export default function BookingPage() {
                       <Button
                         type="submit"
                         className="bg-gold-gradient from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 text-white w-full h-12 text-lg !rounded-button shadow-gold"
-                        disabled={isSubmitting || !isValid}
+                        disabled={
+                          isSubmitting ||
+                          !isValid ||
+                          !selectedDate ||
+                          !selectedTime
+                        }
                       >
                         {isSubmitting ? "Submitting..." : "Confirm appointment"}
                       </Button>

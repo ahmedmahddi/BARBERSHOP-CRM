@@ -5,7 +5,31 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { mockDashboardStats, mockServices } from "@/lib/utils";
 
+interface Barber {
+  id: string;
+  name: string;
+  isActive: boolean;
+  [key: string]: any; // For other properties we don't need here
+}
+
 export default function AdminDashboardPage() {
+  const [barberCount, setBarberCount] = useState(4);
+  const [activeBarbers, setActiveBarbers] = useState(4);
+
+  useEffect(() => {
+    // Load barber data from localStorage
+    const storedBarbers = localStorage.getItem("barbers");
+    if (storedBarbers) {
+      try {
+        const barbers = JSON.parse(storedBarbers) as Barber[];
+        setBarberCount(barbers.length);
+        setActiveBarbers(barbers.filter(b => b.isActive).length);
+      } catch (error) {
+        console.error("Error loading barbers:", error);
+      }
+    }
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -72,6 +96,19 @@ export default function AdminDashboardPage() {
           <div className="text-xs text-zinc-400 mt-1">
             Points: {mockDashboardStats.loyaltyProgram.totalPoints} | Discounts:{" "}
             {mockDashboardStats.loyaltyProgram.discountsRedeemed}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-amber-400/20 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 text-white shadow-[0_0_15px_rgba(251,191,36,0.15)] p-6">
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="tracking-tight text-sm font-medium text-amber-200">
+              Team
+            </h3>
+          </div>
+          <div className="text-2xl font-bold text-amber-400">{barberCount}</div>
+          <div className="text-xs text-zinc-400 mt-1">
+            Active: {activeBarbers} | Available Today:{" "}
+            {Math.min(activeBarbers, 3)}
           </div>
         </div>
 
@@ -198,6 +235,56 @@ export default function AdminDashboardPage() {
                   <path d="M16 10a4 4 0 0 1-8 0"></path>
                 </svg>
                 Manage Products
+              </Button>
+            </Link>
+            <Link href="/dashboard/admin/team">
+              <Button className="w-full justify-start border border-amber-400/30 text-white bg-zinc-800 hover:bg-amber-400/10">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                Manage Team
+              </Button>
+            </Link>
+            <Link href="/dashboard/admin/schedule">
+              <Button className="w-full justify-start border border-amber-400/30 text-white bg-zinc-800 hover:bg-amber-400/10">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <path d="M8 14h.01"></path>
+                  <path d="M12 14h.01"></path>
+                  <path d="M16 14h.01"></path>
+                  <path d="M8 18h.01"></path>
+                  <path d="M12 18h.01"></path>
+                  <path d="M16 18h.01"></path>
+                </svg>
+                Manage Schedule
               </Button>
             </Link>
           </div>

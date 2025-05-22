@@ -44,7 +44,7 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center">
           <div className="w-8 h-1 bg-amber-400 mr-4"></div>
           <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-transparent">
@@ -107,10 +107,10 @@ export default function CustomersPage() {
                     key={customer.id}
                     className="border-b border-zinc-700/50 transition-colors hover:bg-zinc-800/50"
                   >
-                    <td className="p-4 align-middle font-medium">
+                    <td className="p-4 align-middle font-medium break-words">
                       {customer.name}
                     </td>
-                    <td className="p-4 align-middle">
+                    <td className="p-4 align-middle break-words">
                       <div>{customer.email}</div>
                       <div className="text-zinc-400">{customer.phone}</div>
                     </td>
@@ -148,7 +148,7 @@ export default function CustomersPage() {
                       ${customer.totalSpent.toFixed(2)}
                     </td>
                     <td className="p-4 align-middle">
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-2">
                         <Button
                           variant="default"
                           size="sm"
@@ -219,10 +219,10 @@ export default function CustomersPage() {
                     <tbody>
                       {selectedCustomer.haircuts.map((haircut, index) => (
                         <tr key={index} className="border-t border-zinc-700/50">
-                          <td className="p-2">{haircut.date}</td>
-                          <td className="p-2">{haircut.service}</td>
-                          <td className="p-2">{haircut.barber}</td>
-                          <td className="p-2 text-amber-400">
+                          <td className="p-2 break-words">{haircut.date}</td>
+                          <td className="p-2 break-words">{haircut.service}</td>
+                          <td className="p-2 break-words">{haircut.barber}</td>
+                          <td className="p-2 text-amber-400 break-words">
                             ${haircut.price.toFixed(2)}
                           </td>
                         </tr>
@@ -251,9 +251,11 @@ export default function CustomersPage() {
                     <tbody>
                       {selectedCustomer.purchases.map((purchase, index) => (
                         <tr key={index} className="border-t border-zinc-700/50">
-                          <td className="p-2">{purchase.date}</td>
-                          <td className="p-2">{purchase.product}</td>
-                          <td className="p-2 text-amber-400">
+                          <td className="p-2 break-words">{purchase.date}</td>
+                          <td className="p-2 break-words">
+                            {purchase.product}
+                          </td>
+                          <td className="p-2 text-amber-400 break-words">
                             ${purchase.price.toFixed(2)}
                           </td>
                         </tr>
@@ -264,7 +266,7 @@ export default function CustomersPage() {
               </div>
 
               {/* Loyalty Summary */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="rounded-lg border border-amber-400/20 bg-zinc-800/50 p-4">
                   <div className="text-sm text-zinc-400">Loyalty Points</div>
                   <div className="text-2xl font-bold text-white">

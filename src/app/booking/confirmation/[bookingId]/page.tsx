@@ -13,41 +13,16 @@ import {
   faUserAlt,
   faInfoCircle,
   faArrowLeft,
+  faExclamationTriangle,
 } from "@fortawesome/free-solid-svg-icons";
+import { useToast } from "@/components/ui/use-toast";
+import { getBookingById, BookingData } from "@/api/services/bookingService";
+import { format } from "date-fns";
 
-interface BookingData {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  service: string;
-  barber: string;
-  dateTime: string;
-  comments: string;
-  imageUrl: string;
-}
+// BookingData interface is now imported from bookingService
 
-// Mock data mapping (in a real app, this would come from an API)
-const SERVICE_NAMES: { [key: string]: string } = {
-  haircut: "Haircut",
-  beard: "Beard Trim",
-  styling: "Styling",
-  facecare: "Face Care",
-};
-
-const BARBER_NAMES: { [key: string]: string } = {
-  james: "James",
-  bradley: "Bradley",
-  megan: "Megan",
-  matthew: "Matthew",
-};
-
-const DATETIME_MAP: { [key: string]: string } = {
-  "1": "April 15, 2025 - 10:00 AM",
-  "2": "April 15, 2025 - 11:00 AM",
-  "3": "April 15, 2025 - 2:00 PM",
-  "4": "April 15, 2025 - 3:00 PM",
-};
+// Service and barber names will come from the API response
+// We'll use the actual data from the backend instead of these mappings
 
 export default function ConfirmationPage({
   params,
@@ -55,21 +30,37 @@ export default function ConfirmationPage({
   params: { bookingId: string };
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get booking data from localStorage
-    const bookings = JSON.parse(localStorage.getItem("bookings") || "[]");
-    const foundBooking = bookings.find(
-      (b: BookingData) => b.id === params.bookingId
-    );
-
-    if (foundBooking) {
-      setBooking(foundBooking);
+    async function fetchBookingDetails() {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch booking from backend API
+        const bookingData = await getBookingById(params.bookingId);
+        setBooking(bookingData);
+      } catch (err: any) {
+        console.error('Error fetching booking:', err);
+        setError(err.message ?? 'Failed to load booking details');
+        toast({
+          title: 'Error',
+          description: 'Could not load booking details',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
     }
-    setLoading(false);
-  }, [params.bookingId]);
+    
+    if (params.bookingId) {
+      fetchBookingDetails();
+    }
+  }, [params.bookingId, toast]);
 
   if (loading) {
     return (
@@ -84,6 +75,31 @@ export default function ConfirmationPage({
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-zinc-800 text-white flex items-center justify-center">
+        <div className="text-center space-y-6 p-8">
+          <FontAwesomeIcon 
+            icon={faExclamationTriangle} 
+            className="text-5xl text-gold-400 mb-4" 
+          />
+          <h2 className="text-3xl font-bold bg-gold-gradient from-white via-gold-200 to-white bg-clip-text text-transparent">
+            Error Loading Booking
+          </h2>
+          <p className="text-zinc-400">
+            {error}
+          </p>
+          <Button
+            onClick={() => router.push("/booking")}
+            className="bg-gold-gradient from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 text-white !rounded-button shadow-gold"
+          >
+            Back to Booking
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
   if (!booking) {
     return (
       <div className="min-h-screen bg-zinc-800 text-white flex items-center justify-center">
@@ -151,19 +167,19 @@ export default function ConfirmationPage({
                     <div>
                       <p className="text-sm text-zinc-400">Service</p>
                       <p className="text-white">
-                        {SERVICE_NAMES[booking.service]}
+                        {booking.serviceId}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-zinc-400">Barber</p>
                       <p className="text-white">
-                        {BARBER_NAMES[booking.barber]}
+                        {booking.barberId}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-zinc-400">Date & Time</p>
                       <p className="text-white">
-                        {DATETIME_MAP[booking.dateTime]}
+                        {`${booking.date} at ${booking.time}`}
                       </p>
                     </div>
                   </div>
@@ -221,7 +237,7 @@ export default function ConfirmationPage({
                     <img
                       src={booking.imageUrl}
                       alt="Style reference"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                 </div>

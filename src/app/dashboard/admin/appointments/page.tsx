@@ -1,40 +1,155 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { mockAppointments, type Appointment } from "@/lib/utils";
+import { getAllBookings, updateBookingStatus } from "@/api/services/bookingService";
+
+// Define status type alias to fix lint issues
+type BookingStatus = "confirmed" | "pending" | "cancelled";
+
+// Define types for Booking Data (consistent with BookingPage.tsx)
+interface BookingFormData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  service: string;
+  barber: string;
+  dateTime: string;
+  formattedDate: string;
+  selectedTime: string;
+  comments: string;
+  imageUrl: string;
+  agreement: boolean;
+  status: BookingStatus;
+  emailReminder: boolean;
+  discountApplied: number;
+  // price: number; // Removed price field
+}
+
+const SERVICES_MAP: Record<string, string> = {
+  haircut: "Haircut",
+  beard: "Beard Trim",
+  styling: "Styling",
+  facecare: "Face Care",
+};
+
+const BARBERS_MAP: Record<string, string> = {
+  james: "James",
+  bradley: "Bradley",
+  megan: "Megan",
+  matthew: "Matthew",
+};
+
+// Price map for services (static for simplicity)
+// const SERVICE_PRICES: Record<string, number> = {
+//   haircut: 30,
+//   beard: 20,
+//   styling: 25,
+//   facecare: 40,
+// };
+
+// Helper function to get status class name based on status
+const getStatusClassName = (status: BookingStatus): string => {
+  switch (status) {
+    case "confirmed":
+      return "bg-emerald-950 text-emerald-400 border border-emerald-500/30";
+    case "pending":
+      return "bg-amber-950 text-amber-400 border border-amber-500/30";
+    case "cancelled":
+      return "bg-rose-950 text-rose-400 border border-rose-500/30";
+    default:
+      return "bg-zinc-800 text-zinc-400 border border-zinc-700";
+  }
+};
 
 export default function AppointmentsPage() {
   const { toast } = useToast();
-  const [appointments, setAppointments] =
-    useState<Appointment[]>(mockAppointments);
+  const [appointments, setAppointments] = useState<BookingFormData[]>([]);
   const [filter, setFilter] = useState("all");
+
+  useEffect(() => {
+    // Fetch bookings from API
+    const fetchBookings = async () => {
+      try {
+        setAppointments([]); // Clear existing appointments
+        const bookings = await getAllBookings();
+        
+        // Map API bookings to the format expected by the admin dashboard
+        const mappedBookings = bookings.map(booking => ({
+          id: booking.id ?? '',
+          name: booking.name ?? '',
+          email: booking.email ?? '',
+          phone: booking.phone ?? '',
+          service: booking.service_name ?? '',
+          barber: booking.barber_name ?? '',
+          dateTime: booking.date && booking.time ? `${booking.date} ${booking.time}` : '',
+          formattedDate: booking.date ?? '',
+          selectedTime: booking.time ?? '',
+          comments: booking.comments ?? '',
+          imageUrl: booking.imageUrl ?? '',
+          agreement: booking.agreement ?? false,
+          status: (booking.status as BookingStatus) ?? "pending",
+          emailReminder: false, // Admin-specific field
+          discountApplied: 0,    // Admin-specific field
+        }));
+        
+        setAppointments(mappedBookings);
+        toast({
+          title: "Appointments Loaded",
+          description: `Successfully loaded ${mappedBookings.length} appointments from the server.`,
+        });
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+        toast({
+          title: "Error Loading Appointments",
+          description: "Could not load appointments from the server. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    fetchBookings();
+  }, [toast]);
 
   const filteredAppointments = appointments.filter(appointment => {
     if (filter === "all") return true;
     return appointment.status === filter;
   });
 
-  const updateStatus = (
-    id: number,
+  const updateStatus = async (
+    id: string,
     newStatus: "confirmed" | "pending" | "cancelled"
   ) => {
-    setAppointments(prevAppointments =>
-      prevAppointments.map(appointment =>
-        appointment.id === id
-          ? { ...appointment, status: newStatus }
-          : appointment
-      )
-    );
+    try {
+      // Call the API to update the status
+      await updateBookingStatus(id, newStatus);
+      
+      // Update the local state
+      setAppointments(prevAppointments =>
+        prevAppointments.map(appointment =>
+          appointment.id === id
+            ? { ...appointment, status: newStatus }
+            : appointment
+        )
+      );
 
-    toast({
-      title: "Status Updated",
-      description: `Appointment status has been updated to ${newStatus}.`,
-    });
+      toast({
+        title: "Status Updated",
+        description: `Appointment status has been updated to ${newStatus}.`,
+      });
+    } catch (error) {
+      console.error(`Error updating appointment ${id} status:`, error);
+      toast({
+        title: "Update Failed",
+        description: `Failed to update appointment status. Please try again.`,
+        variant: "destructive",
+      });
+    }
   };
 
-  const toggleEmailReminder = (id: number) => {
+  const toggleEmailReminder = (id: string) => {
     setAppointments(prevAppointments =>
       prevAppointments.map(appointment =>
         appointment.id === id
@@ -49,7 +164,7 @@ export default function AppointmentsPage() {
     });
   };
 
-  const applyDiscount = (id: number, discountPercent: number) => {
+  const applyDiscount = (id: string, discountPercent: number) => {
     setAppointments(prevAppointments =>
       prevAppointments.map(appointment =>
         appointment.id === id
@@ -93,22 +208,28 @@ export default function AppointmentsPage() {
             <thead>
               <tr className="border-b border-amber-400/20">
                 <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
-                  Customer
+                  Customer Name
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
-                  Contact
+                  Contact (Email/Phone)
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
                   Service
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
-                  Price
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
                   Barber
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
                   Date & Time
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
+                  {/* Price */}
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
+                  Image Preview
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
+                  Comments
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-amber-400">
                   Status
@@ -121,8 +242,8 @@ export default function AppointmentsPage() {
             <tbody>
               {filteredAppointments.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-4 text-center text-zinc-400">
-                    No appointments found
+                  <td colSpan={10} className="p-4 text-center text-zinc-400">
+                    No appointments found in localStorage or matching filter.
                   </td>
                 </tr>
               ) : (
@@ -131,38 +252,47 @@ export default function AppointmentsPage() {
                     key={appointment.id}
                     className="border-b border-zinc-700/50 transition-colors hover:bg-zinc-800/50"
                   >
-                    <td className="p-4 align-middle font-medium">
-                      {appointment.customer}
+                    <td className="p-4 align-middle font-medium break-words">
+                      {appointment.name}
                     </td>
-                    <td className="p-4 align-middle">
+                    <td className="p-4 align-middle break-words">
                       <div>{appointment.email}</div>
                       <div className="text-zinc-400">{appointment.phone}</div>
                     </td>
-                    <td className="p-4 align-middle">{appointment.service}</td>
+                    <td className="p-4 align-middle break-words">
+                      {SERVICES_MAP[appointment.service] || appointment.service}
+                    </td>
+                    <td className="p-4 align-middle break-words">
+                      {BARBERS_MAP[appointment.barber] || appointment.barber}
+                    </td>
+                    <td className="p-4 align-middle break-words">
+                      {appointment.formattedDate && appointment.selectedTime
+                        ? `${appointment.formattedDate} - ${appointment.selectedTime}`
+                        : appointment.dateTime}
+                    </td>
+                    <td className="p-4 align-middle break-words">
+                      {/* Price logic removed */}
+                    </td>
                     <td className="p-4 align-middle">
-                      <div className="text-amber-400">
-                        ${appointment.price.toFixed(2)}
-                      </div>
-                      {appointment.discountApplied > 0 && (
-                        <div className="text-sm text-emerald-400">
-                          {appointment.discountApplied}% off applied
-                        </div>
+                      {appointment.imageUrl ? (
+                        <img
+                          src={appointment.imageUrl}
+                          alt="Style preference"
+                          className="h-16 w-16 object-cover rounded-md"
+                          onError={e =>
+                            (e.currentTarget.style.display = "none")
+                          }
+                        />
+                      ) : (
+                        <span className="text-zinc-400">No image</span>
                       )}
                     </td>
-                    <td className="p-4 align-middle">{appointment.barber}</td>
-                    <td className="p-4 align-middle">
-                      <div>{appointment.date}</div>
-                      <div className="text-zinc-400">{appointment.time}</div>
+                    <td className="p-4 align-middle whitespace-pre-wrap max-w-xs truncate">
+                      {appointment.comments || "N/A"}
                     </td>
                     <td className="p-4 align-middle">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          appointment.status === "confirmed"
-                            ? "bg-emerald-950 text-emerald-400 border border-emerald-500/30"
-                            : appointment.status === "pending"
-                            ? "bg-amber-950 text-amber-400 border border-amber-500/30"
-                            : "bg-rose-950 text-rose-400 border border-rose-500/30"
-                        }`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusClassName(appointment.status)}`}
                       >
                         {appointment.status.charAt(0).toUpperCase() +
                           appointment.status.slice(1)}

@@ -109,7 +109,7 @@ export default function ContentPage() {
             Manage Images
           </Button>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div
               key={i}
@@ -132,7 +132,7 @@ export default function ContentPage() {
             Manage Testimonials
           </Button>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
             <div
               key={i}
@@ -260,7 +260,7 @@ export default function ContentPage() {
                 Close
               </Button>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6].map(i => (
                 <div
                   key={i}

@@ -21,10 +21,10 @@ const Hero = () => {
             <div className="flex items-center justify-center w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-dashed border-gold-400 group hover:shadow-gold transition-all duration-300">
               <div className="text-center">
                 <div className="text-gold-400 font-bold group-hover:text-gold-500 transition-colors">
-                  CONSULT
+                  BOOK
                 </div>
                 <div className="text-gold-400 font-bold group-hover:text-gold-500 transition-colors">
-                  ONLINE!
+                  NOW!
                 </div>
               </div>
             </div>
