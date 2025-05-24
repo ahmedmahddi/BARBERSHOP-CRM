@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import Logo from "@/assets/images/logoZ.png";
+import Logo from "@/assets/images/LogoNK.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
@@ -37,7 +37,7 @@ function Header() {
 
   return (
     <div className="w-full py-4 px-6 fixed top-0 left-0 right-0 z-50">
-      <header className="max-w-7xl mx-auto bg-zinc-900/90 backdrop-blur-lg rounded-full px-8 py-2 shadow-gold-lg border border-gold-400/10">
+      <header className="max-w-8xl mx-auto bg-zinc-900/90 backdrop-blur-lg rounded-full px-8 py-2 shadow-gold-lg border border-gold-400/10">
         {/* Desktop Header */}
         <div className="hidden lg:flex items-center justify-between">
           {/* Left Navigation */}
@@ -53,16 +53,6 @@ function Header() {
               Home
             </Link>
             <Link
-              href="/gallery"
-              className={`text-sm uppercase tracking-wider transition-colors duration-300 ${
-                activeTab === "Gallery"
-                  ? "text-gold-400"
-                  : "text-white hover:text-gold-400"
-              }`}
-            >
-              Gallery
-            </Link>
-            <Link
               href="/services"
               className={`text-sm uppercase tracking-wider transition-colors duration-300 ${
                 activeTab === "Services"
@@ -71,6 +61,16 @@ function Header() {
               }`}
             >
               Services
+            </Link>
+            <Link
+              href="/team"
+              className={`text-sm uppercase tracking-wider transition-colors duration-300 ${
+                activeTab === "Team"
+                  ? "text-gold-400"
+                  : "text-white hover:text-gold-400"
+              }`}
+            >
+              Team
             </Link>
           </nav>
 
@@ -85,7 +85,7 @@ function Header() {
                     alt="logo"
                     width={48}
                     height={48}
-                    className="h-14 w-14"
+                    className="h-16 w-16"
                   />
                 </Link>
               </div>
@@ -106,14 +106,14 @@ function Header() {
                 Shop
               </Link>
               <Link
-                href="/team"
+                href="/gallery"
                 className={`text-sm uppercase tracking-wider transition-colors duration-300 ${
-                  activeTab === "Team"
+                  activeTab === "Gallery"
                     ? "text-gold-400"
                     : "text-white hover:text-gold-400"
                 }`}
               >
-                Team
+                Gallery
               </Link>
 
               <Link href="/dashboard">
@@ -135,18 +135,18 @@ function Header() {
               <Image
                 src={Logo}
                 alt="logo"
-                width={42}
-                height={42}
+                width={48}
+                height={48}
                 className="mr-3"
               />
             </Link>
-            <h1 className="text-gold-400 font-bold text-xl tracking-wider">
-              <Link href="/">Zied's</Link>
+            {/* <h1 className="text-gold-400 font-bold text-xl tracking-wider">
+              <Link href="/">Naim</Link>
               <Link href="/" className="text-white">
                 {" "}
-                Barber
+                Kchaou
               </Link>
-            </h1>
+            </h1> */}
           </div>
           <div className="flex items-center space-x-4">
             <Link href="/booking">
@@ -203,17 +203,6 @@ function Header() {
                 Home
               </Link>
               <Link
-                href="/gallery"
-                className={`text-sm uppercase tracking-wider py-2 ${
-                  activeTab === "Gallery"
-                    ? "text-gold-400"
-                    : "text-white hover:text-gold-400"
-                }`}
-                onClick={toggleMobileMenu}
-              >
-                Gallery
-              </Link>
-              <Link
                 href="/services"
                 className={`text-sm uppercase tracking-wider py-2 ${
                   activeTab === "Services"
@@ -223,6 +212,17 @@ function Header() {
                 onClick={toggleMobileMenu}
               >
                 Services
+              </Link>
+              <Link
+                href="/team"
+                className={`text-sm uppercase tracking-wider py-2 ${
+                  activeTab === "Team"
+                    ? "text-gold-400"
+                    : "text-white hover:text-gold-400"
+                }`}
+                onClick={toggleMobileMenu}
+              >
+                Team
               </Link>
               <Link
                 href="/shop"
@@ -236,25 +236,20 @@ function Header() {
                 Shop
               </Link>
               <Link
-                href="/team"
+                href="/gallery"
                 className={`text-sm uppercase tracking-wider py-2 ${
-                  activeTab === "Team"
+                  activeTab === "Gallery"
                     ? "text-gold-400"
                     : "text-white hover:text-gold-400"
                 }`}
                 onClick={toggleMobileMenu}
               >
-                Team
+                Gallery
               </Link>
               <div className="pt-4">
                 <Button className="w-full bg-gold-gradient from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 text-white text-sm uppercase tracking-wider !rounded-full shadow-gold">
                   <Link href="/booking">Book an appointment</Link>
                 </Button>
-              </div>
-              <div className="flex items-center space-x-2 pt-4">
-                <span className="text-zinc-400">EN</span>
-                <span className="text-zinc-600">|</span>
-                <span className="text-zinc-400">IT</span>
               </div>
             </nav>
           </div>

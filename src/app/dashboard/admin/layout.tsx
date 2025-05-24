@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { type Admin } from "@/lib/utils";
-import Logo from "@/assets/images/logoZ.png";
+import Logo from "@/assets/images/LogoNK.png";
 
 export default function AdminLayout({
   children,
@@ -54,12 +54,12 @@ export default function AdminLayout({
               <Image
                 src={Logo}
                 alt="logo"
-                width={36}
-                height={36}
-                className="h-9 w-9"
+                width={42}
+                height={42}
+                className="h-12 w-12"
               />
               <span className="font-bold text-xl bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-transparent">
-                Zied's Barber
+                NK Barbershop
               </span>
             </Link>
             <button

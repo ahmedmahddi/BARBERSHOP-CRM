@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getAllBarbers, getAvailableBarbers, BarberData } from "@/api/services/barberService";
+import {
+  getAllBarbers,
+  getAvailableBarbers,
+  BarberData,
+} from "@/api/services/barberService";
 import { useBooking } from "@/hooks/useBooking";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -86,8 +90,8 @@ const BARBER_SCHEDULE: Record<string, Record<string, string[]>> = {
       "01:00 PM",
       "02:00 PM",
       "03:00 PM",
-      "04:00 PM"
-    ]
+      "04:00 PM",
+    ],
   },
   "d7456438-fa8a-4526-b3cc-b58819169cb9": {
     "2025-05-16": [
@@ -98,10 +102,10 @@ const BARBER_SCHEDULE: Record<string, Record<string, string[]>> = {
       "02:00 PM",
       "03:00 PM",
       "04:00 PM",
-      "05:00 PM"
+      "05:00 PM",
     ],
   },
-  "bradley": {
+  bradley: {
     "2025-05-15": [
       "09:30 AM",
       "10:30 AM",
@@ -112,7 +116,7 @@ const BARBER_SCHEDULE: Record<string, Record<string, string[]>> = {
       "04:30 PM",
     ],
   },
-  "megan": {
+  megan: {
     "2025-05-15": [
       "09:30 AM",
       "10:30 AM",
@@ -123,7 +127,7 @@ const BARBER_SCHEDULE: Record<string, Record<string, string[]>> = {
       "04:30 PM",
     ],
   },
-  "matthew": {
+  matthew: {
     "2025-05-15": [
       "09:30 AM",
       "10:30 AM",
@@ -186,7 +190,7 @@ export default function BookingPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  
+
   // State for barbers from API
   const [barbers, setBarbers] = useState<BarberData[]>([]);
   const [loadingBarbers, setLoadingBarbers] = useState(false);
@@ -201,9 +205,9 @@ export default function BookingPage() {
         setLoadingBarbers(true);
         const barbersData = await getAllBarbers();
         setBarbers(barbersData);
-        console.log('Fetched barbers:', barbersData);
+        console.log("Fetched barbers:", barbersData);
       } catch (error) {
-        console.error('Error fetching barbers:', error);
+        console.error("Error fetching barbers:", error);
         toast({
           title: "Error",
           description: "Could not load barbers. Please try again later.",
@@ -226,24 +230,35 @@ export default function BookingPage() {
       // Get time slots for this barber on this date
       // First check if the selected barber has working hours in their profile
       const selectedBarberData = barbers.find(b => b.id === selectedBarber);
-      
+
       // Get working hours for this barber (either from their profile or use default)
-      const allPossibleSlots = selectedBarberData?.workingHours
-        ?.find(wh => wh.day === format(selectedDate, 'EEEE').toLowerCase())?.hours.split(',')
-        ?? BARBER_SCHEDULE[selectedBarber]?.[formattedDate]
-        ?? DEFAULT_TIME_SLOTS;
-      
+      const allPossibleSlots =
+        selectedBarberData?.workingHours
+          ?.find(wh => wh.day === format(selectedDate, "EEEE").toLowerCase())
+          ?.hours.split(",") ??
+        BARBER_SCHEDULE[selectedBarber]?.[formattedDate] ??
+        DEFAULT_TIME_SLOTS;
+
       // Fetch available barbers for the selected date
       const fetchAvailableBarbers = async () => {
         try {
-          const formattedTime = selectedTime ?? '';
+          const formattedTime = selectedTime ?? "";
           if (formattedDate && formattedTime) {
-            const availableBarbers = await getAvailableBarbers(formattedDate, formattedTime);
+            const availableBarbers = await getAvailableBarbers(
+              formattedDate,
+              formattedTime
+            );
             setAvailableBarbers(availableBarbers);
-            console.log('Available barbers for', formattedDate, formattedTime, ':', availableBarbers);
+            console.log(
+              "Available barbers for",
+              formattedDate,
+              formattedTime,
+              ":",
+              availableBarbers
+            );
           }
         } catch (error) {
-          console.error('Error fetching available barbers:', error);
+          console.error("Error fetching available barbers:", error);
         }
       };
 
@@ -303,7 +318,7 @@ export default function BookingPage() {
     }
 
     const file = e.target.files[0];
-    console.log('File selected:', file.name, file.type, file.size);
+    console.log("File selected:", file.name, file.type, file.size);
     setSelectedFile(file);
 
     // Show preview
@@ -314,7 +329,7 @@ export default function BookingPage() {
         if (typeof reader.result === "string") {
           setPreviewUrl(reader.result);
           // Display the preview somewhere in the UI
-          console.log('Preview URL generated, length:', reader.result.length);
+          console.log("Preview URL generated, length:", reader.result.length);
         }
       } catch (err) {
         console.error("Error processing image:", err);
@@ -332,21 +347,21 @@ export default function BookingPage() {
 
   // Helper function to convert time from 12-hour to 24-hour format
   const convertTo24HourFormat = (timeStr: string): string => {
-    if (!timeStr) return '';
-    
-    const [timePart, modifier] = timeStr.split(' ');
-    let [hours, minutes] = timePart.split(':');
+    if (!timeStr) return "";
+
+    const [timePart, modifier] = timeStr.split(" ");
+    let [hours, minutes] = timePart.split(":");
     let hoursNum = parseInt(hours, 10);
-    
+
     // Convert to 24-hour format
-    if (modifier === 'PM' && hoursNum < 12) {
+    if (modifier === "PM" && hoursNum < 12) {
       hoursNum += 12;
-    } else if (modifier === 'AM' && hoursNum === 12) {
+    } else if (modifier === "AM" && hoursNum === 12) {
       hoursNum = 0;
     }
-    
+
     // Ensure two digits
-    const formattedHours = hoursNum.toString().padStart(2, '0');
+    const formattedHours = hoursNum.toString().padStart(2, "0");
     return `${formattedHours}:${minutes}`;
   };
 
@@ -363,11 +378,11 @@ export default function BookingPage() {
 
       // Format date as YYYY-MM-DD
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
-      
+
       // Convert time to 24-hour format (HH:MM)
       const formattedTime = convertTo24HourFormat(selectedTime);
-      
-      console.log('Sending time format:', formattedTime); 
+
+      console.log("Sending time format:", formattedTime);
 
       // Create final form data with explicit date and time fields
       const bookingData = {
@@ -376,22 +391,25 @@ export default function BookingPage() {
         date: formattedDate,
         time: formattedTime,
       };
-      console.log('Booking data:', bookingData);
+      console.log("Booking data:", bookingData);
 
       // Log file information before submission
       if (selectedFile) {
-        console.log('Submitting file:', {
+        console.log("Submitting file:", {
           name: selectedFile.name,
           type: selectedFile.type,
           size: selectedFile.size,
-          lastModified: new Date(selectedFile.lastModified).toISOString()
+          lastModified: new Date(selectedFile.lastModified).toISOString(),
         });
       } else {
-        console.log('No file selected for upload');
+        console.log("No file selected for upload");
       }
-      
+
       // Submit to backend using our booking service
-      const response = await submitBooking(bookingData, selectedFile ?? undefined);
+      const response = await submitBooking(
+        bookingData,
+        selectedFile ?? undefined
+      );
 
       // Show success toast
       toast({
@@ -405,7 +423,9 @@ export default function BookingPage() {
       console.error("Error submitting booking:", error);
       toast({
         title: "Booking Failed",
-        description: error.message ?? "There was an error processing your booking. Please try again.",
+        description:
+          error.message ??
+          "There was an error processing your booking. Please try again.",
         variant: "destructive",
       });
     }
@@ -444,13 +464,19 @@ export default function BookingPage() {
                   </div>
                   <div className="space-y-6">
                     <div>
-                      <label htmlFor="service-select" className="block text-sm mb-2 text-zinc-300">
+                      <label
+                        htmlFor="service-select"
+                        className="block text-sm mb-2 text-zinc-300"
+                      >
                         Service
                       </label>
                       <Select
                         onValueChange={value => setValue("service", value)}
                       >
-                        <SelectTrigger id="service-select" className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30">
+                        <SelectTrigger
+                          id="service-select"
+                          className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30"
+                        >
                           <SelectValue placeholder="Select service" />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-800 border border-gold-400/20 text-white">
@@ -468,15 +494,27 @@ export default function BookingPage() {
                       )}
                     </div>
                     <div>
-                      <label htmlFor="barber-select" className="block text-sm mb-2 text-zinc-300">
+                      <label
+                        htmlFor="barber-select"
+                        className="block text-sm mb-2 text-zinc-300"
+                      >
                         Barber
                       </label>
                       <Select
                         onValueChange={value => setValue("barber", value)}
                         disabled={loadingBarbers}
                       >
-                        <SelectTrigger id="barber-select" className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30">
-                          <SelectValue placeholder={loadingBarbers ? "Loading barbers..." : "Choose your barber"} />
+                        <SelectTrigger
+                          id="barber-select"
+                          className="bg-zinc-800/70 border border-zinc-700 text-white rounded-lg h-12 focus:border-gold-400 focus:ring-1 focus:ring-gold-400 transition-colors hover:border-gold-400/30"
+                        >
+                          <SelectValue
+                            placeholder={
+                              loadingBarbers
+                                ? "Loading barbers..."
+                                : "Choose your barber"
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-800 border border-gold-400/20 text-white">
                           {barbers.length > 0 ? (
@@ -487,7 +525,9 @@ export default function BookingPage() {
                             ))
                           ) : (
                             <SelectItem value="no-barbers" disabled>
-                              {loadingBarbers ? "Loading..." : "No barbers available"}
+                              {loadingBarbers
+                                ? "Loading..."
+                                : "No barbers available"}
                             </SelectItem>
                           )}
                         </SelectContent>
@@ -499,7 +539,10 @@ export default function BookingPage() {
                       )}
                     </div>
                     <div>
-                      <label htmlFor="date-picker" className="block text-sm mb-2 text-zinc-300">
+                      <label
+                        htmlFor="date-picker"
+                        className="block text-sm mb-2 text-zinc-300"
+                      >
                         Select Date
                       </label>
                       <div className="bg-zinc-800/70 border border-zinc-700 rounded-lg p-4 focus-within:border-gold-400 focus-within:ring-1 focus-within:ring-gold-400 transition-colors hover:border-gold-400/30">
@@ -581,7 +624,10 @@ export default function BookingPage() {
                           </div>
                         </div>
                         <div>
-                          <label htmlFor="time-slots" className="block text-sm mb-2 text-zinc-300">
+                          <label
+                            htmlFor="time-slots"
+                            className="block text-sm mb-2 text-zinc-300"
+                          >
                             <div className="flex items-center">
                               <FontAwesomeIcon
                                 icon={faClock}
@@ -599,7 +645,10 @@ export default function BookingPage() {
                               </p>
                             </div>
                           ) : (
-                            <div id="time-slots" className="grid grid-cols-2 gap-2 mt-2">
+                            <div
+                              id="time-slots"
+                              className="grid grid-cols-2 gap-2 mt-2"
+                            >
                               {availableTimeSlots.length > 0 ? (
                                 availableTimeSlots.map(time => (
                                   <Button
@@ -655,32 +704,59 @@ export default function BookingPage() {
                     </h2>
                   </div>
                   <div className="border-2 border-dashed border-zinc-700 rounded-lg p-8 text-center h-[300px] flex flex-col items-center justify-center group hover:border-gold-400/30 transition-colors bg-zinc-900/30">
-                    <div className="text-5xl mb-4 text-zinc-600 group-hover:text-gold-400 transition-colors">
-                      <FontAwesomeIcon icon={faCloudUploadAlt} />
-                    </div>
-                    <p className="text-lg text-zinc-400 mb-2">
-                      Drag & Drop your image here
-                    </p>
-                    <p className="text-sm text-zinc-600 mb-4">OR</p>
-                    <input
-                      type="file"
-                      id="image"
-                      accept=".jpg,.png,.gif"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                    <Button
-                      type="button"
-                      className="bg-gold-gradient from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 text-white !rounded-button shadow-gold"
-                      onClick={() => document.getElementById("image")?.click()}
-                      disabled={uploading}
-                    >
-                      {uploading ? "Uploading..." : "Browse images"}
-                    </Button>
-                    <p className="text-xs text-zinc-600 mt-4">
-                      Supported formats: JPG, PNG and GIF
-                    </p>
-                    <p className="text-xs text-zinc-600">Max size: 10mb</p>
+                    {previewUrl ? (
+                      <div className="w-full h-full relative flex flex-col items-center">
+                        <div className="relative w-full h-[200px] mb-4">
+                          <img
+                            src={previewUrl}
+                            alt="Style preview"
+                            className="w-full h-full object-contain rounded"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border border-zinc-700 hover:border-rose-400/30 text-rose-400 bg-zinc-800/70"
+                          onClick={() => {
+                            setPreviewUrl(null);
+                            setSelectedFile(null);
+                          }}
+                        >
+                          Remove image
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-5xl mb-4 text-zinc-600 group-hover:text-gold-400 transition-colors">
+                          <FontAwesomeIcon icon={faCloudUploadAlt} />
+                        </div>
+                        <p className="text-lg text-zinc-400 mb-2">
+                          Drag & Drop your image here
+                        </p>
+                        <p className="text-sm text-zinc-600 mb-4">OR</p>
+                        <input
+                          type="file"
+                          id="image"
+                          accept=".jpg,.png,.gif"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                        <Button
+                          type="button"
+                          className="bg-gold-gradient from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 text-white !rounded-button shadow-gold"
+                          onClick={() =>
+                            document.getElementById("image")?.click()
+                          }
+                          disabled={uploading}
+                        >
+                          {uploading ? "Uploading..." : "Browse images"}
+                        </Button>
+                        <p className="text-xs text-zinc-600 mt-4">
+                          Supported formats: JPG, PNG and GIF
+                        </p>
+                        <p className="text-xs text-zinc-600">Max size: 10mb</p>
+                      </>
+                    )}
                   </div>
                 </div>
 
