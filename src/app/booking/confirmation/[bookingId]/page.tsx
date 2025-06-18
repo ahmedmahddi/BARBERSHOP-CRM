@@ -16,13 +16,8 @@ import {
   faExclamationTriangle,
 } from "@fortawesome/free-solid-svg-icons";
 import { useToast } from "@/components/ui/use-toast";
-import { getBookingById, BookingData } from "@/api/services/bookingService";
 import { format } from "date-fns";
 
-// BookingData interface is now imported from bookingService
-
-// Service and barber names will come from the API response
-// We'll use the actual data from the backend instead of these mappings
 
 export default function ConfirmationPage({
   params,
@@ -31,32 +26,41 @@ export default function ConfirmationPage({
 }) {
   const router = useRouter();
   const { toast } = useToast();
-  const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [booking, setBooking] = useState<any>(null);
 
   useEffect(() => {
     async function fetchBookingDetails() {
       try {
         setLoading(true);
         setError(null);
-        
-        // Fetch booking from backend API
-        const bookingData = await getBookingById(params.bookingId);
-        setBooking(bookingData);
+
+        setBooking({
+          serviceId: "Haircut",
+          barberId: "John Doe",
+          date: "2024-06-10",
+          time: "14:00",
+          name: "Jane Smith",
+          email: "jane@example.com",
+          phone: "123-456-7890",
+          comments: "Please be gentle.",
+          imageUrl: "https://via.placeholder.com/400x225.png?text=Style+Reference",
+        });
+
       } catch (err: any) {
-        console.error('Error fetching booking:', err);
-        setError(err.message ?? 'Failed to load booking details');
+        console.error("Error fetching booking:", err);
+        setError(err.message ?? "Failed to load booking details");
         toast({
-          title: 'Error',
-          description: 'Could not load booking details',
-          variant: 'destructive',
+          title: "Error",
+          description: "Could not load booking details",
+          variant: "destructive",
         });
       } finally {
         setLoading(false);
       }
     }
-    
+
     if (params.bookingId) {
       fetchBookingDetails();
     }
@@ -79,16 +83,14 @@ export default function ConfirmationPage({
     return (
       <div className="min-h-screen bg-zinc-800 text-white flex items-center justify-center">
         <div className="text-center space-y-6 p-8">
-          <FontAwesomeIcon 
-            icon={faExclamationTriangle} 
-            className="text-5xl text-gold-400 mb-4" 
+          <FontAwesomeIcon
+            icon={faExclamationTriangle}
+            className="text-5xl text-gold-400 mb-4"
           />
           <h2 className="text-3xl font-bold bg-gold-gradient from-white via-gold-200 to-white bg-clip-text text-transparent">
             Error Loading Booking
           </h2>
-          <p className="text-zinc-400">
-            {error}
-          </p>
+          <p className="text-zinc-400">{error}</p>
           <Button
             onClick={() => router.push("/booking")}
             className="bg-gold-gradient from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 text-white !rounded-button shadow-gold"
@@ -99,7 +101,7 @@ export default function ConfirmationPage({
       </div>
     );
   }
-  
+
   if (!booking) {
     return (
       <div className="min-h-screen bg-zinc-800 text-white flex items-center justify-center">
@@ -145,7 +147,7 @@ export default function ConfirmationPage({
                   Thank you for your booking!
                 </h2>
                 <p className="text-zinc-400">
-                  We've sent a confirmation email to {booking.email}
+                  We've sent a confirmation email to : {booking.email}
                 </p>
               </div>
 
@@ -166,15 +168,11 @@ export default function ConfirmationPage({
                   <div className="space-y-4">
                     <div>
                       <p className="text-sm text-zinc-400">Service</p>
-                      <p className="text-white">
-                        {booking.serviceId}
-                      </p>
+                      <p className="text-white">{booking.serviceId}</p>
                     </div>
                     <div>
                       <p className="text-sm text-zinc-400">Barber</p>
-                      <p className="text-white">
-                        {booking.barberId}
-                      </p>
+                      <p className="text-white">{booking.barberId}</p>
                     </div>
                     <div>
                       <p className="text-sm text-zinc-400">Date & Time</p>

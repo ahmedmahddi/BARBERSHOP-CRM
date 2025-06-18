@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { getAllBookings, updateBookingStatus } from "@/api/services/bookingService";
 
-// Define status type alias to fix lint issues
+// Define status type alias
 type BookingStatus = "confirmed" | "pending" | "cancelled";
 
-// Define types for Booking Data (consistent with BookingPage.tsx)
+// Booking data type
 interface BookingFormData {
   id: string;
   name: string;
@@ -25,7 +24,6 @@ interface BookingFormData {
   status: BookingStatus;
   emailReminder: boolean;
   discountApplied: number;
-  // price: number; // Removed price field
 }
 
 const SERVICES_MAP: Record<string, string> = {
@@ -42,15 +40,6 @@ const BARBERS_MAP: Record<string, string> = {
   matthew: "Matthew",
 };
 
-// Price map for services (static for simplicity)
-// const SERVICE_PRICES: Record<string, number> = {
-//   haircut: 30,
-//   beard: 20,
-//   styling: 25,
-//   facecare: 40,
-// };
-
-// Helper function to get status class name based on status
 const getStatusClassName = (status: BookingStatus): string => {
   switch (status) {
     case "confirmed":
@@ -69,48 +58,21 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<BookingFormData[]>([]);
   const [filter, setFilter] = useState("all");
 
+  // Load bookings from localStorage
   useEffect(() => {
-    // Fetch bookings from API
-    const fetchBookings = async () => {
-      try {
-        setAppointments([]); // Clear existing appointments
-        const bookings = await getAllBookings();
-        
-        // Map API bookings to the format expected by the admin dashboard
-        const mappedBookings = bookings.map(booking => ({
-          id: booking.id ?? '',
-          name: booking.name ?? '',
-          email: booking.email ?? '',
-          phone: booking.phone ?? '',
-          service: booking.service_name ?? '',
-          barber: booking.barber_name ?? '',
-          dateTime: booking.date && booking.time ? `${booking.date} ${booking.time}` : '',
-          formattedDate: booking.date ?? '',
-          selectedTime: booking.time ?? '',
-          comments: booking.comments ?? '',
-          imageUrl: booking.imageUrl ?? '',
-          agreement: booking.agreement ?? false,
-          status: (booking.status as BookingStatus) ?? "pending",
-          emailReminder: false, // Admin-specific field
-          discountApplied: 0,    // Admin-specific field
-        }));
-        
-        setAppointments(mappedBookings);
-        toast({
-          title: "Appointments Loaded",
-          description: `Successfully loaded ${mappedBookings.length} appointments from the server.`,
-        });
-      } catch (error) {
-        console.error('Error fetching appointments:', error);
-        toast({
-          title: "Error Loading Appointments",
-          description: "Could not load appointments from the server. Please try again later.",
-          variant: "destructive",
-        });
-      }
-    };
-    
-    fetchBookings();
+    const bookings = JSON.parse(localStorage.getItem("bookings") ?? "[]");
+    // Add default status/emailReminder/discount if missing (for legacy data)
+    const mappedBookings = bookings.map((booking: any) => ({
+      ...booking,
+      status: booking.status ?? "pending",
+      emailReminder: booking.emailReminder ?? false,
+      discountApplied: booking.discountApplied ?? 0,
+    }));
+    setAppointments(mappedBookings);
+    toast({
+      title: "Appointments Loaded",
+      description: `Loaded ${mappedBookings.length} appointments from localStorage.`,
+    });
   }, [toast]);
 
   const filteredAppointments = appointments.filter(appointment => {
@@ -118,61 +80,43 @@ export default function AppointmentsPage() {
     return appointment.status === filter;
   });
 
-  const updateStatus = async (
-    id: string,
-    newStatus: "confirmed" | "pending" | "cancelled"
-  ) => {
-    try {
-      // Call the API to update the status
-      await updateBookingStatus(id, newStatus);
-      
-      // Update the local state
-      setAppointments(prevAppointments =>
-        prevAppointments.map(appointment =>
-          appointment.id === id
-            ? { ...appointment, status: newStatus }
-            : appointment
-        )
-      );
-
-      toast({
-        title: "Status Updated",
-        description: `Appointment status has been updated to ${newStatus}.`,
-      });
-    } catch (error) {
-      console.error(`Error updating appointment ${id} status:`, error);
-      toast({
-        title: "Update Failed",
-        description: `Failed to update appointment status. Please try again.`,
-        variant: "destructive",
-      });
-    }
+  // Update status in state and localStorage
+  const updateStatus = (id: string, newStatus: BookingStatus) => {
+    setAppointments(prev =>
+      prev.map(app => (app.id === id ? { ...app, status: newStatus } : app))
+    );
+    // Update in localStorage
+    const bookings = JSON.parse(localStorage.getItem("bookings") ?? "[]");
+    const updated = bookings.map((app: any) =>
+      app.id === id ? { ...app, status: newStatus } : app
+    );
+    localStorage.setItem("bookings", JSON.stringify(updated));
+    toast({
+      title: "Status Updated",
+      description: `Appointment status updated to ${newStatus}.`,
+    });
   };
 
+  // Toggle email reminder in state only
   const toggleEmailReminder = (id: string) => {
-    setAppointments(prevAppointments =>
-      prevAppointments.map(appointment =>
-        appointment.id === id
-          ? { ...appointment, emailReminder: !appointment.emailReminder }
-          : appointment
+    setAppointments(prev =>
+      prev.map(app =>
+        app.id === id ? { ...app, emailReminder: !app.emailReminder } : app
       )
     );
-
     toast({
       title: "Email Reminder Updated",
       description: "Email reminder settings have been updated.",
     });
   };
 
+  // Apply discount in state only
   const applyDiscount = (id: string, discountPercent: number) => {
-    setAppointments(prevAppointments =>
-      prevAppointments.map(appointment =>
-        appointment.id === id
-          ? { ...appointment, discountApplied: discountPercent }
-          : appointment
+    setAppointments(prev =>
+      prev.map(app =>
+        app.id === id ? { ...app, discountApplied: discountPercent } : app
       )
     );
-
     toast({
       title: "Discount Applied",
       description: `${discountPercent}% discount has been applied to the appointment.`,
@@ -292,7 +236,9 @@ export default function AppointmentsPage() {
                     </td>
                     <td className="p-4 align-middle">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusClassName(appointment.status)}`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusClassName(
+                          appointment.status
+                        )}`}
                       >
                         {appointment.status.charAt(0).toUpperCase() +
                           appointment.status.slice(1)}

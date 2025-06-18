@@ -1,12 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  getAllBarbers,
-  getAvailableBarbers,
-  BarberData,
-} from "@/api/services/barberService";
-import { useBooking } from "@/hooks/useBooking";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, FormProvider } from "react-hook-form";
@@ -41,8 +35,6 @@ interface Service {
   name: string;
 }
 
-// Using BarberData interface from barberService.ts
-
 interface BookingFormData {
   name: string;
   email: string;
@@ -63,9 +55,12 @@ const SERVICES: Service[] = [
   { id: "facecare", name: "Face Care" },
 ];
 
-// Barbers will be fetched from the API
+const MOCK_BARBERS = [
+  { id: "143a0b5d-7fbb-4036-9f10-7fe420e2dd46", name: "Bradley" },
+  { id: "d7456438-fa8a-4526-b3cc-b58819169cb9", name: "Megan" },
+  { id: "matthew", name: "Matthew" },
+];
 
-// Default time slots for barbers (used when no specific schedule is defined)
 const DEFAULT_TIME_SLOTS = [
   "09:00 AM",
   "10:00 AM",
@@ -78,10 +73,7 @@ const DEFAULT_TIME_SLOTS = [
   "05:00 PM",
 ];
 
-// Barber schedules will be fetched from the API
-// This is a fallback for testing
 const BARBER_SCHEDULE: Record<string, Record<string, string[]>> = {
-  // Example fallback schedule for specific barbers
   "143a0b5d-7fbb-4036-9f10-7fe420e2dd46": {
     "2025-05-15": [
       "09:00 AM",
@@ -141,7 +133,6 @@ const BARBER_SCHEDULE: Record<string, Record<string, string[]>> = {
   },
 };
 
-// Function to get working hours for a barber on a specific date
 function getWorkingHours(barber: string, date: Date): string {
   const formattedDate = format(date, "yyyy-MM-dd");
   const schedule =
@@ -182,7 +173,6 @@ export default function BookingPage() {
     watch,
   } = methods;
 
-  const { submitBooking } = useBooking();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -191,88 +181,23 @@ export default function BookingPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // State for barbers from API
-  const [barbers, setBarbers] = useState<BarberData[]>([]);
-  const [loadingBarbers, setLoadingBarbers] = useState(false);
-  const [availableBarbers, setAvailableBarbers] = useState<BarberData[]>([]);
+  const [barbers] = useState(MOCK_BARBERS);
+  const [loadingBarbers] = useState(false);
 
   const selectedBarber = watch("barber");
-
-  // Fetch all barbers when component mounts
-  useEffect(() => {
-    const fetchBarbers = async () => {
-      try {
-        setLoadingBarbers(true);
-        const barbersData = await getAllBarbers();
-        setBarbers(barbersData);
-        console.log("Fetched barbers:", barbersData);
-      } catch (error) {
-        console.error("Error fetching barbers:", error);
-        toast({
-          title: "Error",
-          description: "Could not load barbers. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingBarbers(false);
-      }
-    };
-
-    fetchBarbers();
-  }, [toast]);
 
   // Update available time slots when date or barber changes
   useEffect(() => {
     if (selectedBarber && selectedDate) {
       setCheckingAvailability(true);
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
-
-      // Get time slots for this barber on this date
-      // First check if the selected barber has working hours in their profile
-      const selectedBarberData = barbers.find(b => b.id === selectedBarber);
-
-      // Get working hours for this barber (either from their profile or use default)
       const allPossibleSlots =
-        selectedBarberData?.workingHours
-          ?.find(wh => wh.day === format(selectedDate, "EEEE").toLowerCase())
-          ?.hours.split(",") ??
-        BARBER_SCHEDULE[selectedBarber]?.[formattedDate] ??
-        DEFAULT_TIME_SLOTS;
+        BARBER_SCHEDULE[selectedBarber]?.[formattedDate] ?? DEFAULT_TIME_SLOTS;
 
-      // Fetch available barbers for the selected date
-      const fetchAvailableBarbers = async () => {
-        try {
-          const formattedTime = selectedTime ?? "";
-          if (formattedDate && formattedTime) {
-            const availableBarbers = await getAvailableBarbers(
-              formattedDate,
-              formattedTime
-            );
-            setAvailableBarbers(availableBarbers);
-            console.log(
-              "Available barbers for",
-              formattedDate,
-              formattedTime,
-              ":",
-              availableBarbers
-            );
-          }
-        } catch (error) {
-          console.error("Error fetching available barbers:", error);
-        }
-      };
-
-      // Only fetch available barbers if we have both date and time
-      if (selectedTime) {
-        fetchAvailableBarbers();
-      }
-
-      // Get existing bookings from localStorage
       const existingBookings = JSON.parse(
         localStorage.getItem("bookings") ?? "[]"
       );
 
-      // Find bookings for this barber on this date
       const bookedSlots = existingBookings
         .filter((booking: any) => {
           return (
@@ -282,15 +207,13 @@ export default function BookingPage() {
         })
         .map((booking: any) => booking.selectedTime);
 
-      // Filter out booked slots to get available slots
       const availableSlots = allPossibleSlots.filter(
         (slot: string) => !bookedSlots.includes(slot)
       );
 
-      // Simulate a bit of delay to show loading state (remove in production)
       setTimeout(() => {
         setAvailableTimeSlots(availableSlots);
-        setSelectedTime(null); // Reset selected time when date or barber changes
+        setSelectedTime(null);
         setCheckingAvailability(false);
       }, 500);
     } else {
@@ -300,7 +223,6 @@ export default function BookingPage() {
     }
   }, [selectedDate, selectedBarber]);
 
-  // Set the dateTime value when both date and time are selected
   useEffect(() => {
     if (selectedDate && selectedTime) {
       const formattedDate = format(selectedDate, "MMMM d, yyyy");
@@ -318,21 +240,16 @@ export default function BookingPage() {
     }
 
     const file = e.target.files[0];
-    console.log("File selected:", file.name, file.type, file.size);
     setSelectedFile(file);
 
-    // Show preview
     setUploading(true);
     const reader = new FileReader();
     reader.onloadend = () => {
       try {
         if (typeof reader.result === "string") {
           setPreviewUrl(reader.result);
-          // Display the preview somewhere in the UI
-          console.log("Preview URL generated, length:", reader.result.length);
         }
       } catch (err) {
-        console.error("Error processing image:", err);
         toast({
           title: "Error",
           description: "Failed to process image",
@@ -345,7 +262,6 @@ export default function BookingPage() {
     reader.readAsDataURL(file);
   };
 
-  // Helper function to convert time from 12-hour to 24-hour format
   const convertTo24HourFormat = (timeStr: string): string => {
     if (!timeStr) return "";
 
@@ -353,18 +269,17 @@ export default function BookingPage() {
     let [hours, minutes] = timePart.split(":");
     let hoursNum = parseInt(hours, 10);
 
-    // Convert to 24-hour format
     if (modifier === "PM" && hoursNum < 12) {
       hoursNum += 12;
     } else if (modifier === "AM" && hoursNum === 12) {
       hoursNum = 0;
     }
 
-    // Ensure two digits
     const formattedHours = hoursNum.toString().padStart(2, "0");
     return `${formattedHours}:${minutes}`;
   };
 
+  // Simulate booking submission with mock logic
   const onSubmit = async (data: BookingFormData) => {
     try {
       if (!selectedDate || !selectedTime) {
@@ -376,51 +291,34 @@ export default function BookingPage() {
         return;
       }
 
-      // Format date as YYYY-MM-DD
       const formattedDate = format(selectedDate, "yyyy-MM-dd");
-
-      // Convert time to 24-hour format (HH:MM)
       const formattedTime = convertTo24HourFormat(selectedTime);
 
-      console.log("Sending time format:", formattedTime);
-
-      // Create final form data with explicit date and time fields
       const bookingData = {
         ...data,
-        // Override dateTime with properly formatted values
         date: formattedDate,
         time: formattedTime,
+        barber: data.barber,
+        formattedDate,
+        selectedTime,
       };
-      console.log("Booking data:", bookingData);
 
-      // Log file information before submission
-      if (selectedFile) {
-        console.log("Submitting file:", {
-          name: selectedFile.name,
-          type: selectedFile.type,
-          size: selectedFile.size,
-          lastModified: new Date(selectedFile.lastModified).toISOString(),
-        });
-      } else {
-        console.log("No file selected for upload");
-      }
-
-      // Submit to backend using our booking service
-      const response = await submitBooking(
-        bookingData,
-        selectedFile ?? undefined
+      const existingBookings = JSON.parse(
+        localStorage.getItem("bookings") ?? "[]"
+      );
+      const newBooking = { ...bookingData, id: Date.now().toString() };
+      localStorage.setItem(
+        "bookings",
+        JSON.stringify([...existingBookings, newBooking])
       );
 
-      // Show success toast
       toast({
         title: "Booking Confirmed",
         description: "Your appointment has been scheduled successfully!",
       });
 
-      // Redirect to confirmation page with the actual booking ID
-      router.push(`/booking/confirmation/${response.id}`);
+      router.push(`/booking/confirmation/${newBooking.id}`);
     } catch (error: any) {
-      console.error("Error submitting booking:", error);
       toast({
         title: "Booking Failed",
         description:
@@ -830,7 +728,7 @@ export default function BookingPage() {
                         {...register("phone", {
                           required: "Phone number is required",
                           pattern: {
-                            value: /^[0-9+\-\s]+$/,
+                            value: /^[0-9+\\-\\s]+$/,
                             message: "Invalid phone number",
                           },
                         })}
